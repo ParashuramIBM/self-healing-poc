@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: parashuram-n-dev
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus-sa
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+          imagePullPolicy: Always
+          args:
+            - --config.file=/etc/prometheus/config/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.enable-lifecycle
+          ports:
+            - containerPort: 9090
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: prometheus-storage
+              mountPath: /prometheus
+            - name: rules-volume
+              mountPath: /etc/prometheus/rules
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/config   # ✅ mount folder, not file
+      volumes:
+        - name: prometheus-storage
+          emptyDir: {}
+        - name: rules-volume
+          configMap:
+            name: prometheus-alert-rules
+        - name: prometheus-config-volume
+          configMap:
+            name: prometheus-config

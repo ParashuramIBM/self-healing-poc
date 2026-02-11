@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploy-two
+  namespace: vigneshbaskar-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deploy-two
+  template:
+    metadata:
+      labels:
+        app: deploy-two
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+        - name: promtail-config
+          configMap:
+            name: promtail-config
+      containers:
+        - name: app
+          image: prom/node-exporter:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log/app-logs
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # Start Node Exporter in the background for Prometheus scraping
+              /bin/node_exporter &
+              # Generate sample log entries
+              while true; do
+                echo "$(date) Hello from deploy-two" >> /var/log/app-logs/app.log;
+                sleep 5;
+              done
+
+        - name: promtail
+          image: grafana/promtail:3.1.0
+          args:
+            - -config.file=/etc/promtail/config/promtail.yaml
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log/app-logs
+            - name: promtail-config
+              mountPath: /etc/promtail/config

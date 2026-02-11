@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  labels:
+    name: alertmanager-config
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by: ['alertname']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'ai_diagnostics'
+
+    receivers:
+    - name: 'ai_diagnostics'
+      webhook_configs:
+      - url: 'http://diagnosis-agent-svc:8080/alert'
+        send_resolved: true
+
+    - name: 'slack-notifications'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/TNSBPMMA4/B0AEFDB1JCC/LXWg9IH8eL0AbUJeTr2Rjja'
+        channel: '#self_healing_poc_workspace'
+        send_resolved: true
+
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'dev', 'instance']
